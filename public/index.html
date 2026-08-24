@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VPZH Control Center</title>
+  <link rel="stylesheet" href="/__simulator/ui/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">V</div><div><strong>VPZH</strong><span>Control Center</span></div></div>
+      <div class="workspace-switch"><span class="status-dot"></span><div><small>Workspace</small><strong>iiko Simulator</strong></div><span class="chevron">⌄</span></div>
+      <nav class="nav" aria-label="Основная навигация">
+        <a class="nav-item active" href="#overview"><span class="nav-icon">⌂</span>Обзор</a>
+        <a class="nav-item" href="#menu"><span class="nav-icon">▦</span>Меню и стоп-лист</a>
+        <a class="nav-item" href="#orders"><span class="nav-icon">▤</span>Заказы</a>
+        <a class="nav-item" href="#operations"><span class="nav-icon">⚙</span>Операции</a>
+      </nav>
+      <div class="sidebar-bottom"><div class="system-status"><span class="status-dot"></span><div><small>Simulator status</small><strong>Operational</strong></div></div><a class="nav-item muted" href="/__simulator/openapi.json" target="_blank"><span class="nav-icon">↗</span>OpenAPI</a></div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar"><div class="breadcrumbs"><span>Все Про Жар</span><b>/</b><strong>Simulator</strong></div><div class="top-actions"><button class="icon-button" id="refreshButton" title="Обновить">↻</button><a class="user-chip" href="https://github.com/RotmanSells/vse-pro-zhar-iiko-simulator" target="_blank"><span class="avatar">R</span><span>Local operator</span><span class="chevron">⌄</span></a></div></header>
+
+      <div class="page-body">
+        <section class="page-heading" id="overview"><div><p class="eyebrow">OPERATIONS / LIVE SIMULATION</p><h1>Обзор ресторана</h1><p class="subheading">Контроль availability, terminal health и kitchen order lifecycle.</p></div><div class="heading-actions"><label class="scenario-picker"><span>Сценарий</span><select id="scenarioSelect"><option value="happy">Happy path</option><option value="empty-stop-list">Empty stop-list</option><option value="one-product-stop-listed">One product stopped</option><option value="all-products-stop-listed">All products stopped</option><option value="terminal-offline">Terminal offline</option><option value="command-pending">Command pending</option><option value="command-success">Command success</option><option value="command-failed">Command failed</option><option value="invalid-token">Invalid token</option><option value="expired-token">Expired token</option></select></label><button class="button primary" id="applyScenario">Применить</button><button class="button ghost" id="resetButton">Сбросить</button></div></section>
+
+        <div class="alert hidden" id="alert"><span class="alert-icon">!</span><span id="alertText"></span><button id="closeAlert">×</button></div>
+
+        <section class="kpi-grid" aria-label="Ключевые показатели">
+          <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Terminal group</span><span class="kpi-icon blue">⌁</span></div><div class="kpi-value" id="terminalValue">—</div><div class="kpi-foot" id="terminalFoot">Проверка availability</div></article>
+          <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Доступность меню</span><span class="kpi-icon green">✓</span></div><div class="kpi-value" id="menuValue">—</div><div class="kpi-foot" id="menuFoot">admin_enabled × iiko_available</div></article>
+          <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Заказы simulator</span><span class="kpi-icon violet">▤</span></div><div class="kpi-value" id="ordersValue">0</div><div class="kpi-foot">Текущая in-memory сессия</div></article>
+          <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Активные faults</span><span class="kpi-icon amber">!</span></div><div class="kpi-value" id="faultsValue">0</div><div class="kpi-foot" id="scenarioFoot">Сценарий: happy</div></article>
+        </section>
+
+        <section class="content-grid">
+          <article class="panel terminal-panel"><div class="panel-heading"><div><p class="eyebrow">Iiko operational status</p><h2>Терминал кухни</h2></div><span class="badge success" id="terminalBadge">ONLINE</span></div><div class="terminal-summary"><div class="terminal-emblem">⌁</div><div><strong id="terminalName">Loading...</strong><span id="terminalAddress">—</span></div></div><div class="terminal-meta"><div><small>Organization</small><strong>Все Про Жар</strong></div><div><small>Timezone</small><strong>Europe/Moscow</strong></div><div><small>Service</small><strong>Pickup only</strong></div></div><div class="panel-note"><span class="status-dot"></span><span id="terminalNote">Терминал готов принимать операции.</span></div></article>
+          <article class="panel scenario-panel"><div class="panel-heading"><div><p class="eyebrow">Current runtime</p><h2>Состояние сценария</h2></div><span class="scenario-code" id="scenarioCode">happy</span></div><p class="scenario-description" id="scenarioDescription">Normal pickup flow</p><div class="scenario-track"><div class="track-step complete"><span>1</span><label>Auth</label></div><i></i><div class="track-step complete"><span>2</span><label>Availability</label></div><i></i><div class="track-step" id="scenarioOrderStep"><span>3</span><label>Order</label></div><i></i><div class="track-step"><span>4</span><label>Kitchen</label></div></div><button class="text-button" id="refreshScenario">Обновить состояние <span>→</span></button></article>
+        </section>
+
+        <section class="panel" id="menu"><div class="panel-heading"><div><p class="eyebrow">Catalog capability / operational overlay</p><h2>Меню и стоп-лист</h2></div><div class="panel-tools"><div class="search"><span>⌕</span><input id="productSearch" placeholder="Поиск продукта..." aria-label="Поиск продукта"></div><button class="button ghost small" id="unstopAll">Снять все стопы</button></div></div><div class="table-wrap"><table><thead><tr><th>Продукт</th><th>Категория</th><th>Цена</th><th>Visibility</th><th>Availability</th><th></th></tr></thead><tbody id="productRows"><tr><td colspan="6" class="empty-state">Загрузка меню...</td></tr></tbody></table></div></section>
+
+        <section class="panel" id="orders"><div class="panel-heading"><div><p class="eyebrow">Kitchen execution</p><h2>Заказы</h2></div><span class="live-label"><span class="pulse"></span>Live</span></div><div class="table-wrap"><table><thead><tr><th>iiko order ID</th><th>Creation</th><th>Kitchen status</th><th>Timeline</th><th></th></tr></thead><tbody id="orderRows"><tr><td colspan="5" class="empty-state">Заказов пока нет</td></tr></tbody></table></div></section>
+
+        <section class="operations-grid" id="operations"><article class="panel fault-panel"><div class="panel-heading"><div><p class="eyebrow">Chaos testing</p><h2>Fault injection</h2></div><span class="badge neutral">LOCAL ONLY</span></div><div class="form-grid"><label>Endpoint<select id="faultEndpoint"><option>/api/1/stop_lists</option><option>/api/1/organizations</option><option>/api/1/deliveries/create</option><option>/api/1/commands/status</option></select></label><label>Mode<select id="faultMode"><option value="slow-response">Slow response</option><option value="timeout">Timeout</option><option value="connection-drop">Connection drop</option><option value="malformed-json">Malformed JSON</option><option value="schema-drift-extra-field">Schema drift: extra</option><option value="schema-drift-missing-required-field">Schema drift: missing</option><option value="status">HTTP status</option></select></label><label id="faultStatusField">Status<input id="faultStatus" type="number" value="503" min="400" max="599"></label><label>Delay, ms<input id="faultDelay" type="number" value="250" min="0" max="120000"></label></div><div class="form-actions"><button class="button danger" id="applyFault">Добавить fault</button><button class="button ghost" id="clearFaults">Очистить faults</button></div></article><article class="panel activity-panel"><div class="panel-heading"><div><p class="eyebrow">Runtime state</p><h2>Активные faults</h2></div></div><div id="faultList" class="fault-list"><div class="empty-state">Нет активных faults</div></div></article></section>
+
+        <footer class="footer"><span>VPZH Control Center · standalone simulator</span><span>Schema-backed · Real-iiko capture pending</span></footer>
+      </div>
+    </main>
+  </div>
+  <script src="/__simulator/ui/app.js"></script>
+</body>
+</html>

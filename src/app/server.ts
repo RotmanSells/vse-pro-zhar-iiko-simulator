@@ -1,5 +1,7 @@
 import { createServer as createHttpServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { performance } from 'node:perf_hooks';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { loadConfig, type Config } from './config.js';
 import { SystemClock, type Clock } from '../shared/clock/clock.js';
 import { readJson, sendJson } from '../shared/http/json.js';
@@ -44,6 +46,10 @@ export function createApp(config: Config = loadConfig(), clock: Clock = new Syst
     try {
       if (url.pathname === '/__simulator/health' && method === 'GET') {
         sendJson(response, 200, { status: 'ok', service: 'vse-pro-zhar-iiko-simulator', scenario: state.currentScenario, upstreamSchema: 'contracts/upstream/iiko-openapi.json' });
+        return;
+      }
+      if (url.pathname === '/__simulator/ui' || url.pathname === '/__simulator/ui/' || url.pathname === '/__simulator/ui/app.css' || url.pathname === '/__simulator/ui/app.js') {
+        serveUi(url.pathname, response);
         return;
       }
       if (url.pathname === '/__simulator/openapi.json' && method === 'GET') {
@@ -148,6 +154,17 @@ function applySchemaDrift(payload: Record<string, unknown>, fault: FaultAction |
     return copy;
   }
   return payload;
+}
+
+function serveUi(pathname: string, response: ServerResponse): void {
+  const asset = pathname.endsWith('app.css') ? { file: 'app.css', contentType: 'text/css; charset=utf-8' } : pathname.endsWith('app.js') ? { file: 'app.js', contentType: 'application/javascript; charset=utf-8' } : { file: 'index.html', contentType: 'text/html; charset=utf-8' };
+  try {
+    const body = readFileSync(resolve(process.cwd(), 'public', asset.file));
+    response.writeHead(200, { 'content-type': asset.contentType, 'cache-control': 'no-store' });
+    response.end(body);
+  } catch {
+    sendJson(response, 404, { error: 'ui_asset_not_found' });
+  }
 }
 
 function handleError(error: unknown, request: IncomingMessage, response: ServerResponse): void {

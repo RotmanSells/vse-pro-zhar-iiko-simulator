@@ -21,6 +21,8 @@ IIKO_BASE_URL=http://127.0.0.1:4010
 # production: IIKO_BASE_URL=https://api-ru.iiko.services
 ```
 
+The local operations UI is available at `http://127.0.0.1:4010/__simulator/ui`. It is a simulator-only control console for scenarios, stop-list and order lifecycle; it does not replace the production iiko interface or product Admin.
+
 The local process listens on `127.0.0.1:4010` by default. Docker uses a configurable container-internal bind (default `0.0.0.0`) while publishing only `127.0.0.1:4010` on the host. Health is simulator-only:
 
 ```bash
