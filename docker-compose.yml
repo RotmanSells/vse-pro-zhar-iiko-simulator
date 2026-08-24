@@ -1,0 +1,25 @@
+services:
+  iiko-simulator:
+    build: .
+    environment:
+      NODE_ENV: production
+      # Container-internal bind; the host-side publication below remains loopback-only.
+      HOST: ${HOST:-0.0.0.0}
+      PORT: ${PORT:-4010}
+      SIMULATOR_DETERMINISTIC_IDS: ${SIMULATOR_DETERMINISTIC_IDS:-true}
+      SIMULATOR_TOKEN_TTL_MS: ${SIMULATOR_TOKEN_TTL_MS:-3600000}
+      SIMULATOR_V2_API_KEY: ${SIMULATOR_V2_API_KEY:-vpzh-test-api-key}
+      SIMULATOR_V2_APP_ID: ${SIMULATOR_V2_APP_ID:-00000000-0000-4000-8000-000000000001}
+      SIMULATOR_V2_CLIENT_SECRET: ${SIMULATOR_V2_CLIENT_SECRET:-vpzh-test-client-secret}
+      SIMULATOR_LEGACY_API_LOGIN: ${SIMULATOR_LEGACY_API_LOGIN:-vpzh-test-api-login}
+      SIMULATOR_CONTROL_TOKEN: ${SIMULATOR_CONTROL_TOKEN:-}
+      SIMULATOR_RATE_LIMIT_ENABLED: ${SIMULATOR_RATE_LIMIT_ENABLED:-false}
+      SIMULATOR_RATE_LIMIT_REQUESTS: ${SIMULATOR_RATE_LIMIT_REQUESTS:-60}
+      SIMULATOR_RATE_LIMIT_WINDOW_MS: ${SIMULATOR_RATE_LIMIT_WINDOW_MS:-60000}
+    ports:
+      - "127.0.0.1:${PORT:-4010}:4010"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4010/__simulator/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

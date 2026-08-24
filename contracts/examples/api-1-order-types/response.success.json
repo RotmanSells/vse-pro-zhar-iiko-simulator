@@ -1,0 +1,18 @@
+{
+  "correlationId": "2ce3624e-0150-576e-bf9f-0b1aafa6e2b8",
+  "orderTypes": [
+    {
+      "organizationId": "3e41b6b4-9f43-4f65-8e5d-0c1c4c2f9a10",
+      "items": [
+        {
+          "id": "5c4d5e86-5f6c-46ae-8dd7-8e27b4ab1f31",
+          "name": "Самовывоз (demo)",
+          "orderServiceType": "DeliveryPickUp",
+          "isDeleted": false,
+          "externalRevision": 1,
+          "isDefault": true
+        }
+      ]
+    }
+  ]
+}

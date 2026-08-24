@@ -1,0 +1,28 @@
+{
+  "correlationId": "02323fa6-3e01-5718-989c-2b8868a4d2a6",
+  "paymentTypes": [
+    {
+      "id": "6a0d7c48-8f9e-4a12-9b33-4c5d6e7f8a41",
+      "code": "VPZH_EXTERNAL_SBP",
+      "name": "Внешняя оплата SBP (demo)",
+      "comment": "Simulation fixture for an already confirmed online payment",
+      "combinable": false,
+      "externalRevision": 1,
+      "applicableMarketingCampaigns": [],
+      "isDeleted": false,
+      "printCheque": false,
+      "paymentProcessingType": "External",
+      "paymentTypeKind": "External",
+      "terminalGroups": [
+        {
+          "id": "4c6d5f37-bda2-4ed1-b48e-1b4fa7028f21",
+          "organizationId": "3e41b6b4-9f43-4f65-8e5d-0c1c4c2f9a10",
+          "name": "VPZH demo kitchen terminal",
+          "address": "Краснодар, ул. Бабушкина, 181",
+          "timeZone": "Europe/Moscow",
+          "posVersion": "simulator-9.8.2.2"
+        }
+      ]
+    }
+  ]
+}

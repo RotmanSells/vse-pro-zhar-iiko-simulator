@@ -1,0 +1,12 @@
+[
+  {
+    "id": "5c4d5e86-5f6c-46ae-8dd7-8e27b4ab1f31",
+    "organizationId": "3e41b6b4-9f43-4f65-8e5d-0c1c4c2f9a10",
+    "name": "Самовывоз (demo)",
+    "orderServiceType": "DeliveryPickUp",
+    "isDeleted": false,
+    "isDefault": true,
+    "externalRevision": 1,
+    "simulationOnly": true
+  }
+]

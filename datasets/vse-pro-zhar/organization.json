@@ -1,0 +1,14 @@
+{
+  "id": "3e41b6b4-9f43-4f65-8e5d-0c1c4c2f9a10",
+  "name": "Все Про Жар — simulator fixture",
+  "code": "VPZH-SIM",
+  "address": "Краснодар, ул. Бабушкина, 181",
+  "city": "Краснодар",
+  "country": "Russia",
+  "currencyIsoName": "RUB",
+  "timeZone": "Europe/Moscow",
+  "workingHours": { "from": "10:00", "to": "22:00", "days": [1, 2, 3, 4, 5, 6, 7] },
+  "isDisabled": false,
+  "isCloud": true,
+  "simulationOnly": true
+}

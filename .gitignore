@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.DS_Store
+coverage/
+conformance/captures/*
+!conformance/captures/.gitkeep
+conformance/report.json
+conformance/report.md
+*.log

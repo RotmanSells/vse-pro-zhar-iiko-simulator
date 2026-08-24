@@ -1,0 +1,15 @@
+{
+  "correlationId": "ce6bce93-75ef-5ff1-92c1-c9599d37e780",
+  "externalMenus": [
+    {
+      "id": "vpzh-simulator-external-menu",
+      "name": "Все Про Жар — simulator external menu"
+    }
+  ],
+  "priceCategories": [
+    {
+      "id": "vpzh-simulator-price-category",
+      "name": "Demo default price category"
+    }
+  ]
+}

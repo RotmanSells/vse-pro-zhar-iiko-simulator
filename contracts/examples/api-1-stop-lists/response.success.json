@@ -1,0 +1,14 @@
+{
+  "correlationId": "c2160de3-8ea7-543d-baef-98810ef23f05",
+  "terminalGroupStopLists": [
+    {
+      "organizationId": "3e41b6b4-9f43-4f65-8e5d-0c1c4c2f9a10",
+      "items": [
+        {
+          "terminalGroupId": "4c6d5f37-bda2-4ed1-b48e-1b4fa7028f21",
+          "items": []
+        }
+      ]
+    }
+  ]
+}

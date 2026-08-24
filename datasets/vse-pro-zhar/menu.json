@@ -1,0 +1,8 @@
+{
+  "externalMenuId": "vpzh-simulator-external-menu",
+  "name": "Все Про Жар — simulator external menu",
+  "priceCategoryId": "vpzh-simulator-price-category",
+  "revision": 1,
+  "version": 2,
+  "simulationOnly": true
+}

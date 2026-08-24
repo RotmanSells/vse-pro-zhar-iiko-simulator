@@ -1,0 +1,40 @@
+{
+  "id": 1,
+  "name": "Все Про Жар — simulator external menu",
+  "description": null,
+  "buttonImageUrl": null,
+  "revision": 1,
+  "formatVersion": 2,
+  "intervals": [],
+  "productCategories": [
+    {
+      "id": "70000000-0000-4000-8000-000000000001",
+      "name": "Demo grill",
+      "isDeleted": false
+    },
+    {
+      "id": "70000000-0000-4000-8000-000000000002",
+      "name": "Demo sides",
+      "isDeleted": false
+    },
+    {
+      "id": "70000000-0000-4000-8000-000000000003",
+      "name": "Demo sauces",
+      "isDeleted": false
+    },
+    {
+      "id": "70000000-0000-4000-8000-000000000004",
+      "name": "Demo drinks",
+      "isDeleted": false
+    }
+  ],
+  "customerTagGroups": [],
+  "itemCategories": [],
+  "comboCategories": [
+    {
+      "id": "80000000-0000-4000-8000-000000000001",
+      "name": null,
+      "combos": []
+    }
+  ]
+}

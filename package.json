@@ -1,0 +1,48 @@
+{
+  "name": "vse-pro-zhar-iiko-simulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=24.14.1 <25"
+  },
+  "scripts": {
+    "dev": "tsx watch src/app/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/app/server.js",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:contract": "vitest run tests/contract",
+    "test:integration": "vitest run tests/integration tests/e2e",
+    "test:e2e": "vitest run tests/e2e",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm dataset:validate",
+    "simulator:reset": "tsx scripts/sim.ts reset",
+    "simulator:scenario": "tsx scripts/sim.ts scenario",
+    "sim": "tsx scripts/sim.ts",
+    "dataset:validate": "tsx scripts/dataset-validate.ts",
+    "fixtures:generate": "tsx scripts/generate-fixtures.ts",
+    "upstream:check": "tsx scripts/upstream.ts check",
+    "upstream:update": "tsx scripts/upstream.ts update",
+    "conformance:record": "tsx scripts/conformance.ts record",
+    "conformance:compare": "tsx scripts/conformance.ts compare",
+    "conformance:verify": "tsx scripts/conformance.ts verify",
+    "dataset:import-real": "tsx scripts/import-real.ts"
+  },
+  "dependencies": {
+    "ajv": "8.17.1",
+    "ajv-formats": "3.0.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@typescript-eslint/eslint-plugin": "8.46.2",
+    "@typescript-eslint/parser": "8.46.2",
+    "eslint": "9.39.1",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

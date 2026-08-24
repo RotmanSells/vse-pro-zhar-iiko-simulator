@@ -1,0 +1,11 @@
+{
+  "correlationId": "b5764447-4388-5ebf-bc8a-7edfd10d179f",
+  "organizations": [
+    {
+      "responseType": "Simple",
+      "id": "3e41b6b4-9f43-4f65-8e5d-0c1c4c2f9a10",
+      "name": "Все Про Жар — simulator fixture",
+      "code": "VPZH-SIM"
+    }
+  ]
+}

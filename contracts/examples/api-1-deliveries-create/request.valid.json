@@ -1,0 +1,39 @@
+{
+  "organizationId": "3e41b6b4-9f43-4f65-8e5d-0c1c4c2f9a10",
+  "terminalGroupId": "4c6d5f37-bda2-4ed1-b48e-1b4fa7028f21",
+  "order": {
+    "id": "90000000-0000-4000-8000-000000000010",
+    "externalNumber": "VPZH-0010",
+    "sourceKey": "vpzh-90000000-0000-4000-8000-000000000010",
+    "phone": "+79991234567",
+    "orderTypeId": "5c4d5e86-5f6c-46ae-8dd7-8e27b4ab1f31",
+    "orderServiceType": "DeliveryByClient",
+    "customer": {
+      "type": "regular",
+      "name": "Demo customer"
+    },
+    "items": [
+      {
+        "type": "Product",
+        "productId": "10000000-0000-4000-8000-000000000001",
+        "amount": 1,
+        "price": 490,
+        "modifiers": [
+          {
+            "productId": "20000000-0000-4000-8000-000000000001",
+            "amount": 1,
+            "price": 120
+          }
+        ]
+      }
+    ],
+    "payments": [
+      {
+        "paymentTypeKind": "External",
+        "sum": 610,
+        "paymentTypeId": "6a0d7c48-8f9e-4a12-9b33-4c5d6e7f8a41",
+        "isProcessedExternally": true
+      }
+    ]
+  }
+}

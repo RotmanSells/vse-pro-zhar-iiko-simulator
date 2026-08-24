@@ -1,0 +1,144 @@
+{
+  "correlationId": "322dad63-0839-5117-a7a1-9cbb415a50c3",
+  "orderInfo": {
+    "id": "90000000-0000-4000-8000-000000000010",
+    "posId": null,
+    "externalNumber": "VPZH-0010",
+    "organizationId": "3e41b6b4-9f43-4f65-8e5d-0c1c4c2f9a10",
+    "timestamp": 1787529600000,
+    "creationStatus": "Success",
+    "errorInfo": null,
+    "order": {
+      "phone": "+79991234567",
+      "status": "Unconfirmed",
+      "completeBefore": "2026-08-24 03:30:00.000",
+      "whenCreated": "2026-08-24 03:00:00.000",
+      "whenConfirmed": null,
+      "whenPrinted": null,
+      "whenCookingCompleted": null,
+      "whenSended": null,
+      "whenDelivered": null,
+      "comment": null,
+      "problem": {
+        "hasProblem": false
+      },
+      "operator": null,
+      "marketingSource": null,
+      "deliveryDuration": null,
+      "indexInCourierRoute": null,
+      "cookingStartTime": "2026-08-24 03:00:00.000",
+      "isDeleted": false,
+      "whenReceivedByApi": "2026-08-24 03:00:00.000",
+      "whenReceivedFromFront": "2026-08-24 03:00:00.000",
+      "movedFromDeliveryId": null,
+      "movedFromTerminalGroupId": null,
+      "movedFromOrganizationId": null,
+      "externalCourierService": null,
+      "movedToDeliveryId": null,
+      "movedToTerminalGroupId": null,
+      "movedToOrganizationId": null,
+      "menuId": null,
+      "deliveryZone": null,
+      "lockedAt": null,
+      "estimatedTime": null,
+      "isAsap": true,
+      "whenPacked": null,
+      "priceCategory": null,
+      "trackingLink": null,
+      "sum": 610,
+      "number": 1,
+      "sourceKey": "vpzh-90000000-0000-4000-8000-000000000010",
+      "whenBillPrinted": null,
+      "whenClosed": null,
+      "conception": null,
+      "guestsInfo": {
+        "count": 1,
+        "splitBetweenPersons": false
+      },
+      "items": [
+        {
+          "type": "Product",
+          "status": "Added",
+          "amount": 1,
+          "comment": null,
+          "whenPrinted": null,
+          "size": null,
+          "comboInformation": null,
+          "product": {
+            "id": "10000000-0000-4000-8000-000000000001",
+            "name": "Demo grill chicken"
+          },
+          "modifiers": [
+            {
+              "product": {
+                "id": "20000000-0000-4000-8000-000000000001",
+                "name": "Demo extra cheese"
+              },
+              "amount": 1,
+              "amountIndependentOfParentAmount": false,
+              "codes": null,
+              "productGroup": null,
+              "price": 120,
+              "pricePredefined": true,
+              "resultSum": 120,
+              "deleted": null,
+              "positionId": null,
+              "defaultAmount": 0,
+              "hideIfDefaultAmount": false,
+              "taxPercent": null,
+              "freeOfChargeAmount": 0
+            }
+          ],
+          "codes": null,
+          "price": 490,
+          "cost": 490,
+          "pricePredefined": true,
+          "positionId": null,
+          "taxPercent": null,
+          "resultSum": 490
+        }
+      ],
+      "combos": null,
+      "payments": [
+        {
+          "paymentType": {
+            "id": "6a0d7c48-8f9e-4a12-9b33-4c5d6e7f8a41",
+            "name": "Внешняя оплата SBP (demo)",
+            "kind": "External"
+          },
+          "sum": 610,
+          "isPreliminary": false,
+          "isExternal": true,
+          "isProcessedExternally": true,
+          "isFiscalizedExternally": false,
+          "isPrepay": true
+        }
+      ],
+      "tips": null,
+      "discounts": null,
+      "orderType": {
+        "id": "5c4d5e86-5f6c-46ae-8dd7-8e27b4ab1f31",
+        "name": "Самовывоз (demo)",
+        "orderServiceType": "DeliveryByClient"
+      },
+      "terminalGroupId": "4c6d5f37-bda2-4ed1-b48e-1b4fa7028f21",
+      "processedPaymentsSum": 610,
+      "loyaltyInfo": null,
+      "externalData": null,
+      "customer": {
+        "type": "regular",
+        "id": "90000000-0000-4000-8000-000000000001",
+        "name": "Demo customer",
+        "surname": null,
+        "comment": null,
+        "gender": null,
+        "inBlacklist": false,
+        "blacklistReason": null,
+        "birthdate": null
+      },
+      "deliveryPoint": null,
+      "phoneExtension": null,
+      "parentDeliveryId": null
+    }
+  }
+}

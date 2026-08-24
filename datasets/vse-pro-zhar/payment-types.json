@@ -1,0 +1,17 @@
+[
+  {
+    "id": "6a0d7c48-8f9e-4a12-9b33-4c5d6e7f8a41",
+    "organizationId": "3e41b6b4-9f43-4f65-8e5d-0c1c4c2f9a10",
+    "code": "VPZH_EXTERNAL_SBP",
+    "name": "Внешняя оплата SBP (demo)",
+    "comment": "Simulation fixture for an already confirmed online payment",
+    "combinable": false,
+    "externalRevision": 1,
+    "applicableMarketingCampaigns": [],
+    "isDeleted": false,
+    "printCheque": false,
+    "paymentProcessingType": "External",
+    "paymentTypeKind": "External",
+    "simulationOnly": true
+  }
+]

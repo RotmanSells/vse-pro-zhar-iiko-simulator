@@ -1,0 +1,5 @@
+[
+  { "id": "20000000-0000-4000-8000-000000000001", "groupId": "30000000-0000-4000-8000-000000000001", "name": "Demo extra cheese", "price": 120, "available": true, "simulationOnly": true },
+  { "id": "20000000-0000-4000-8000-000000000002", "groupId": "30000000-0000-4000-8000-000000000001", "name": "Demo spicy sauce", "price": 80, "available": true, "simulationOnly": true },
+  { "id": "20000000-0000-4000-8000-000000000003", "groupId": "30000000-0000-4000-8000-000000000002", "name": "Demo grilled onion", "price": 60, "available": true, "simulationOnly": true }
+]
