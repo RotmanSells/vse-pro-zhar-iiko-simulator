@@ -16,5 +16,4 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/contracts ./contracts
 COPY --from=build /app/datasets ./datasets
 COPY --from=build /app/public ./public
-EXPOSE 4010
 CMD ["node", "dist/src/app/server.js"]

@@ -10,14 +10,14 @@ export const paymentTypeId = '6a0d7c48-8f9e-4a12-9b33-4c5d6e7f8a41';
 export const productId = '10000000-0000-4000-8000-000000000001';
 export const modifierId = '20000000-0000-4000-8000-000000000001';
 
-export async function startTestApp(): Promise<{ app: SimulatorApp; base: string; close: () => Promise<void> }> {
+export async function startTestApp(): Promise<{ app: SimulatorApp; clock: FixedClock; base: string; close: () => Promise<void> }> {
   const config = loadConfig({ ...process.env, PORT: '4010', SIMULATOR_DETERMINISTIC_IDS: 'true' });
   const app = createApp(config, new FixedClock(Date.parse('2026-08-24T00:00:00.000Z')));
   await new Promise<void>((resolve, reject) => { app.server.once('error', reject); app.server.listen(0, '127.0.0.1', () => resolve()); });
   const address = app.server.address();
   if (!address || typeof address === 'string') throw new Error('Test server did not expose a port');
   const base = `http://127.0.0.1:${address.port}`;
-  return { app, base, close: () => closeServer(app.server) };
+  return { app, clock: app.state.clock as FixedClock, base, close: () => closeServer(app.server) };
 }
 
 export async function closeServer(server: Server): Promise<void> {

@@ -12,6 +12,10 @@ export type Fault = z.infer<typeof FaultSchema>;
 
 export type FaultAction = Fault & { applied: true };
 
+export function effectiveFaultDelay(fault: Fault): number {
+  return fault.delayMs ?? (fault.mode === 'timeout' ? 1_000 : 0);
+}
+
 export class FaultEngine {
   private faults = new Map<string, Fault>();
 

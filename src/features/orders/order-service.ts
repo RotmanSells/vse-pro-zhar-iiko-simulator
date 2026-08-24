@@ -59,7 +59,12 @@ export class OrderService {
       timestamp,
       status: 'Unconfirmed',
       creationStatus,
-      history: [{ status: 'Unconfirmed', at: new Date(timestamp).toISOString() }]
+      history: [{ status: 'Unconfirmed', at: new Date(timestamp).toISOString() }],
+      acceptedAt: null,
+      cookingStartedAt: null,
+      cookingCompletedAt: null,
+      closedAt: null,
+      cancelledAt: null
     };
     this.state.orders.set(orderId, order);
     if (creationStatus === 'InProgress') this.state.commands.set(correlationId, { correlationId, organizationId: request.organizationId, state: 'InProgress', orderId });
@@ -124,7 +129,7 @@ export class OrderService {
       };
     });
     const wireOrder = {
-      phone: order.phone, status: order.status, completeBefore: this.formatTime(order.timestamp + 30 * 60_000), whenCreated: order.createdAt, whenConfirmed: null, whenPrinted: null, whenCookingCompleted: order.status === 'CookingCompleted' || order.status === 'Closed' ? order.createdAt : null, whenSended: null, whenDelivered: order.status === 'Closed' ? order.createdAt : null, comment: null, problem: { hasProblem: false }, operator: null, marketingSource: null, deliveryDuration: null, indexInCourierRoute: null, cookingStartTime: order.createdAt, isDeleted: false, whenReceivedByApi: order.createdAt, whenReceivedFromFront: order.createdAt, movedFromDeliveryId: null, movedFromTerminalGroupId: null, movedFromOrganizationId: null, externalCourierService: null, movedToDeliveryId: null, movedToTerminalGroupId: null, movedToOrganizationId: null, menuId: null, deliveryZone: null, lockedAt: null, estimatedTime: null, isAsap: true, whenPacked: null, priceCategory: null, trackingLink: null, sum: order.sum, number: 1, sourceKey: order.sourceKey, whenBillPrinted: null, whenClosed: order.status === 'Closed' ? order.createdAt : null, conception: null, guestsInfo: { count: 1, splitBetweenPersons: false }, items: productItems, combos: null,
+      phone: order.phone, status: order.status, completeBefore: this.formatTime(order.timestamp + 30 * 60_000), whenCreated: order.createdAt, whenConfirmed: order.acceptedAt === null ? null : this.formatTime(order.acceptedAt), whenPrinted: null, whenCookingCompleted: order.cookingCompletedAt === null ? null : this.formatTime(order.cookingCompletedAt), whenSended: null, whenDelivered: null, comment: null, problem: { hasProblem: false }, operator: null, marketingSource: null, deliveryDuration: null, indexInCourierRoute: null, cookingStartTime: this.formatTime(order.cookingStartedAt ?? order.timestamp), isDeleted: false, whenReceivedByApi: order.createdAt, whenReceivedFromFront: null, movedFromDeliveryId: null, movedFromTerminalGroupId: null, movedFromOrganizationId: null, externalCourierService: null, movedToDeliveryId: null, movedToTerminalGroupId: null, movedToOrganizationId: null, menuId: null, deliveryZone: null, lockedAt: null, estimatedTime: null, isAsap: true, whenPacked: null, priceCategory: null, trackingLink: null, sum: order.sum, number: 1, sourceKey: order.sourceKey, whenBillPrinted: null, whenClosed: order.closedAt === null ? null : this.formatTime(order.closedAt), conception: null, guestsInfo: { count: 1, splitBetweenPersons: false }, items: productItems, combos: null,
       payments: paymentType ? [{ paymentType: { id: paymentType.id, name: paymentType.name, kind: 'External' }, sum: order.sum, isPreliminary: false, isExternal: true, isProcessedExternally: true, isFiscalizedExternally: false, isPrepay: true }] : [], tips: null, discounts: null, orderType: orderType ? { id: orderType.id, name: orderType.name, orderServiceType: 'DeliveryByClient' } : null, terminalGroupId: order.terminalGroupId, processedPaymentsSum: order.sum, loyaltyInfo: null, externalData: null,
       customer: { type: 'regular', id: '90000000-0000-4000-8000-000000000001', name: order.customerName ?? 'Demo customer', surname: null, comment: null, gender: null, inBlacklist: false, blacklistReason: null, birthdate: null }, deliveryPoint: null, phoneExtension: null, parentDeliveryId: null
     };

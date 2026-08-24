@@ -17,9 +17,9 @@ services:
       SIMULATOR_RATE_LIMIT_REQUESTS: ${SIMULATOR_RATE_LIMIT_REQUESTS:-60}
       SIMULATOR_RATE_LIMIT_WINDOW_MS: ${SIMULATOR_RATE_LIMIT_WINDOW_MS:-60000}
     ports:
-      - "127.0.0.1:${PORT:-4010}:4010"
+      - "127.0.0.1:${PORT:-4010}:${PORT:-4010}"
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4010/__simulator/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||4010)+'/__simulator/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 5s
       timeout: 3s
       retries: 10

@@ -9,4 +9,6 @@ conformance/captures/*
 !conformance/captures/.gitkeep
 conformance/report.json
 conformance/report.md
+conformance/mapping.template.json
+conformance/mapping.local.json
 *.log
