@@ -43,6 +43,7 @@ Our backend remains the source of truth for catalog, prices, visibility, promoti
 
 ```bash
 pnpm build
+pnpm start
 pnpm lint
 pnpm typecheck
 pnpm test
@@ -68,13 +69,20 @@ docker compose up --build
 
 The compose mapping is loopback-only. Set `HOST` and `PORT` explicitly if a different local binding is required.
 
+`PORT` is both the simulator listen port and the published host port. For example:
+
+```bash
+PORT=4020 docker compose up --build
+curl http://127.0.0.1:4020/__simulator/health
+```
+
 ## HTTP surface
 
 `/__simulator/*` is control/diagnostic API and never overlaps `/api/*`. The compatibility subset and simulator control surface are published at `/__simulator/openapi.json`.
 
 The order state machine uses only iiko wire status values: `Unconfirmed → WaitCooking → CookingStarted → CookingCompleted → Closed`; cancellation uses `Cancelled`. Internal control aliases are `created`, `accepted`, `cooking`, `ready`, `completed`, `cancelled`.
 
-Faults support one-shot or persistent delay, timeout, connection drop, malformed JSON, selected HTTP status, and explicit schema-drift injection. A production rate limit is not asserted; local rate limiting is off by default and configurable.
+Faults support one-shot or persistent delay, a real bounded client-timeout delay, slow response, connection drop, malformed JSON, selected HTTP status, and explicit schema-drift injection. `timeout` delays the server until the client aborts; it is not HTTP 408. Use `mode: status` with `status: 408` for an explicit 408 response. A production rate limit is not asserted; local rate limiting is off by default and configurable.
 
 ## Real-iiko conformance
 
@@ -83,6 +91,14 @@ No conformance command calls the internet unless `IIKO_CONFORMANCE_ENABLED=true`
 Create-order calls to a real account are never automated by record mode. A future explicit write mode must include both `IIKO_ALLOW_REAL_WRITE_TESTS=true` and `IIKO_REAL_WRITE_CONFIRMATION=I_UNDERSTAND_THIS_CREATES_A_REAL_IIKO_OPERATION`.
 
 `pnpm upstream:check` fetches metadata and fails on hash drift; it never updates the pinned snapshot. `pnpm upstream:update` is the explicit update command.
+
+Real captures contain real non-secret identifiers, so compare does not send them directly to the synthetic dataset. Review `conformance/mapping.json` (or set `IIKO_CONFORMANCE_MAPPING`) with explicit real → simulator mappings. `pnpm dataset:import-real` writes an identifier inventory and `conformance/mapping.template.json` without guessing mappings by array position. Missing mappings produce `MAPPING_REQUIRED`, not false `DRIFT`. Compare normalizes only documented volatile values—correlation IDs, tokens, generated order IDs and timestamps—while checking shape, schema, enums and mapped identifier relationships.
+
+`pnpm conformance:compare` produces per-endpoint `statusMatch`, `schemaMatch`, `shapeMatch`, `identifierMappingMatch`, `enumMatch` and notes in `conformance/report.json` and `conformance/report.md`. Overall status is `REAL_CAPTURE_PENDING`, `MAPPING_REQUIRED`, `PASS` or `DRIFT`.
+
+## CI
+
+`.github/workflows/verify.yml` runs Node 24.14.1, pnpm 11.7.0 and `pnpm verify` on pushes to `main` and pull requests.
 
 ## Limitations
 

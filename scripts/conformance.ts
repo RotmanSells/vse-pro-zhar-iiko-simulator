@@ -1,13 +1,20 @@
-import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { loadDataset } from '../src/simulator/dataset/loader.js';
+import { UpstreamValidator } from '../src/shared/validation/upstream.js';
+import { EmptyIdentifierMapping, IdentifierMappingSchema, collectIdentifiers, enumValues, mappingTargetsAreAllowed, missingMappings, normalizeForCompare, remapRequestIdentifiers, shape, mappingTargetForTest, type IdentifierMapping, type MappingRole } from '../src/conformance/mapping.js';
 
 const enabled = process.env.IIKO_CONFORMANCE_ENABLED === 'true';
 const realBase = process.env.IIKO_REAL_BASE_URL;
 const simulatorBase = process.env.IIKO_BASE_URL ?? 'http://127.0.0.1:4010';
 const captureRoot = resolve(process.cwd(), 'conformance/captures');
 const reportPath = resolve(process.cwd(), 'conformance/report.json');
+const mappingPath = resolve(process.env.IIKO_CONFORMANCE_MAPPING ?? resolve(process.cwd(), 'conformance/mapping.json'));
 const method = process.argv[2] ?? 'compare';
+
+type Capture = { endpoint?: string; request?: unknown; response?: { status?: number; body?: unknown } };
+type Comparison = { endpoint: string; status: 'PASS' | 'DRIFT' | 'MAPPING_REQUIRED'; statusMatch: boolean | null; schemaMatch: boolean | null; shapeMatch: boolean | null; identifierMappingMatch: boolean | null; enumMatch: boolean | null; notes: string[] };
+type Report = { status: 'REAL_CAPTURE_PENDING' | 'PASS' | 'DRIFT' | 'MAPPING_REQUIRED'; enabled: boolean; mappingPath: string; comparisons: Comparison[]; notes: string[] };
 
 function redact(value: unknown, key = ''): unknown {
   if (/(authorization|token|secret|credential|apiKey|phone|email|name)/i.test(key)) return '[REDACTED]';
@@ -16,17 +23,29 @@ function redact(value: unknown, key = ''): unknown {
   return value;
 }
 
-function shape(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(shape);
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, shape(child)]));
-  return typeof value;
-}
-
 async function jsonRequest(base: string, path: string, body: unknown, token?: string): Promise<{ status: number; body: unknown; headers: Record<string, string> }> {
   const response = await fetch(`${base}${path}`, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) });
   const text = await response.text();
-  let parsed: unknown; try { parsed = JSON.parse(text) as unknown; } catch { parsed = text; }
+  let parsed: unknown;
+  try { parsed = JSON.parse(text) as unknown; } catch { parsed = text; }
   return { status: response.status, body: parsed, headers: { 'content-type': response.headers.get('content-type') ?? '' } };
+}
+
+async function readMapping(): Promise<IdentifierMapping> {
+  try { return IdentifierMappingSchema.parse(JSON.parse(await readFile(mappingPath, 'utf8')) as unknown); }
+  catch { return EmptyIdentifierMapping; }
+}
+
+function allowedSimulatorIds(): Record<MappingRole, Set<string>> {
+  const dataset = loadDataset();
+  return {
+    organizationIds: new Set([dataset.organization.id]),
+    terminalGroupIds: new Set(dataset.terminalGroups.map((item) => item.id)),
+    orderTypeIds: new Set(dataset.orderTypes.map((item) => item.id)),
+    paymentTypeIds: new Set(dataset.paymentTypes.map((item) => item.id)),
+    productIds: new Set(dataset.products.map((item) => item.id)),
+    modifierIds: new Set(dataset.modifiers.map((item) => item.id))
+  };
 }
 
 async function record(): Promise<void> {
@@ -43,7 +62,7 @@ async function record(): Promise<void> {
   if (auth.status !== 200 || !auth.body || typeof auth.body !== 'object' || !('token' in auth.body)) throw new Error('Real auth capture failed');
   const token = auth.body.token;
   if (typeof token !== 'string') throw new Error('Real auth response token is not a string');
-  const orgs = await jsonRequest(realBase, '/api/1/organizations', {} , token);
+  const orgs = await jsonRequest(realBase, '/api/1/organizations', {}, token);
   await writeFile(resolve(target, 'organizations.json'), JSON.stringify(redact({ endpoint: '/api/1/organizations', request: {}, response: orgs }), null, 2));
   const orgBody = orgs.body as { organizations?: unknown[] };
   const firstOrganization = orgBody.organizations?.[0] as { id?: unknown } | undefined;
@@ -53,39 +72,94 @@ async function record(): Promise<void> {
     const result = await jsonRequest(realBase, endpoint, request, token);
     await writeFile(resolve(target, `${endpoint.replaceAll('/', '-').replace(/^-/, '')}.json`), JSON.stringify(redact({ endpoint, request, response: result }), null, 2));
   }
-  console.log(JSON.stringify({ recorded: true, target }));
+  console.log(JSON.stringify({ recorded: true, target, nextStep: `Review ${mappingPath} before compare` }));
 }
 
-async function compare(): Promise<void> {
-  const report: { enabled: boolean; status: string; comparisons: Array<Record<string, unknown>> } = { enabled, status: enabled ? 'pending' : 'real_capture_pending', comparisons: [] };
-  if (!enabled) { await writeReport(report); console.log(JSON.stringify(report)); return; }
+function validateSchema(validator: UpstreamValidator, endpoint: string, result: { status: number; body: unknown }): boolean {
+  try {
+    if (result.status === 200) validator.response(endpoint, result.body, '200');
+    else validator.responseErrors(endpoint, result.body, result.status);
+    return true;
+  } catch { return false; }
+}
+
+function compareIdentifiers(endpoint: string, realRequest: unknown, realBody: unknown, simulatorRequest: unknown, simulatorBody: unknown, mapping: IdentifierMapping): boolean {
+  const realRefs = [...collectIdentifiers(endpoint, realRequest), ...collectIdentifiers(endpoint, realBody)];
+  const simRefs = [...collectIdentifiers(endpoint, simulatorRequest), ...collectIdentifiers(endpoint, simulatorBody)];
+  return realRefs.every((realRef) => {
+    const target = mappingTargetForTest(mapping, realRef.role, realRef.value);
+    return target !== null && simRefs.some((simRef) => simRef.role === realRef.role && simRef.value === target);
+  });
+}
+
+async function compare(): Promise<Report> {
+  const report: Report = { enabled: enabled && Boolean(realBase), status: 'REAL_CAPTURE_PENDING', mappingPath, comparisons: [], notes: [] };
+  if (!enabled || !realBase) {
+    report.notes.push('Set IIKO_CONFORMANCE_ENABLED=true and IIKO_REAL_BASE_URL to enable capture comparison; no network call was made.');
+    await writeReport(report);
+    console.log(JSON.stringify(report));
+    return report;
+  }
+  const mapping = await readMapping();
   const dates = (await readdir(captureRoot).catch(() => [])).filter((entry) => entry !== '.gitkeep');
   const latest = dates.sort().at(-1);
-  if (!latest) { await writeReport(report); console.log(JSON.stringify(report)); return; }
-  const dir = resolve(captureRoot, latest);
-  const simulatorAuth = await jsonRequest(simulatorBase, '/api/v2/access_token', { apiKey: 'vpzh-test-api-key', appId: '00000000-0000-4000-8000-000000000001', clientSecret: 'vpzh-test-client-secret' });
-  const simulatorToken = simulatorAuth.body && typeof simulatorAuth.body === 'object' && 'token' in simulatorAuth.body && typeof simulatorAuth.body.token === 'string' ? simulatorAuth.body.token : undefined;
-  for (const file of await readdir(dir)) {
-    const capture = JSON.parse(await readFile(resolve(dir, file), 'utf8')) as { endpoint?: string; request?: unknown; response?: { status?: number; body?: unknown } };
-    if (!capture.endpoint || capture.endpoint.includes('access_token')) continue;
-    const simulator = await jsonRequest(simulatorBase, capture.endpoint, capture.request ?? {}, simulatorToken);
-    const realStatus = capture.response?.status;
-    const realBody = capture.response?.body;
-    const match = realStatus === simulator.status && JSON.stringify(shape(realBody)) === JSON.stringify(shape(simulator.body));
-    report.comparisons.push({ endpoint: capture.endpoint, realStatus, simulatorStatus: simulator.status, shapeMatch: match, semantic: 'manual review pending for values' });
+  if (!latest) {
+    report.notes.push('No sanitized real capture found.');
+    await writeReport(report);
+    console.log(JSON.stringify(report));
+    return report;
   }
-  report.status = report.comparisons.every((comparison) => comparison.shapeMatch === true) ? 'shape_match' : 'drift_detected';
+  const dir = resolve(captureRoot, latest);
+  const simulatorAuth = await jsonRequest(simulatorBase, '/api/v2/access_token', { apiKey: process.env.SIMULATOR_V2_API_KEY ?? 'vpzh-test-api-key', appId: process.env.SIMULATOR_V2_APP_ID ?? '00000000-0000-4000-8000-000000000001', clientSecret: process.env.SIMULATOR_V2_CLIENT_SECRET ?? 'vpzh-test-client-secret' });
+  const simulatorToken = simulatorAuth.body && typeof simulatorAuth.body === 'object' && 'token' in simulatorAuth.body && typeof simulatorAuth.body.token === 'string' ? simulatorAuth.body.token : undefined;
+  if (!simulatorToken) throw new Error('Simulator auth failed during conformance compare');
+  const validator = new UpstreamValidator();
+  const allowed = allowedSimulatorIds();
+  for (const file of await readdir(dir)) {
+    const capture = JSON.parse(await readFile(resolve(dir, file), 'utf8')) as Capture;
+    if (!capture.endpoint || capture.endpoint.includes('access_token')) continue;
+    const endpoint = capture.endpoint;
+    const request = capture.request ?? {};
+    const realBody = capture.response?.body;
+    const refs = [...collectIdentifiers(endpoint, request), ...collectIdentifiers(endpoint, realBody)];
+    const missing = missingMappings(refs, mapping);
+    const notes: string[] = [];
+    if (missing.length) {
+      notes.push(`Mapping required for ${missing.map((ref) => `${ref.role}:${ref.value}`).join(', ')}`);
+      report.comparisons.push({ endpoint, status: 'MAPPING_REQUIRED', statusMatch: null, schemaMatch: null, shapeMatch: null, identifierMappingMatch: false, enumMatch: null, notes });
+      continue;
+    }
+    const remapped = remapRequestIdentifiers(request, mapping);
+    const simulator = await jsonRequest(simulatorBase, endpoint, remapped.value, simulatorToken);
+    const realStatus = capture.response?.status ?? 0;
+    const statusMatch = realStatus === simulator.status;
+    const realSchema = validateSchema(validator, endpoint, { status: realStatus, body: realBody });
+    const simulatorSchema = validateSchema(validator, endpoint, simulator);
+    const schemaMatch = realSchema && simulatorSchema;
+    const normalizedReal = normalizeForCompare(realBody, mapping);
+    const normalizedSimulator = normalizeForCompare(simulator.body, mapping);
+    const shapeMatch = JSON.stringify(shape(normalizedReal)) === JSON.stringify(shape(normalizedSimulator));
+    const enumMatch = JSON.stringify(enumValues(normalizedReal).sort()) === JSON.stringify(enumValues(normalizedSimulator).sort());
+    const targetsAllowed = mappingTargetsAreAllowed(mapping, allowed);
+    const identifierMappingMatch = targetsAllowed && compareIdentifiers(endpoint, request, realBody, remapped.value, simulator.body, mapping);
+    if (!targetsAllowed) notes.push('At least one mapping target is not a valid identifier in the synthetic simulator dataset.');
+    notes.push('Volatile normalized: correlationId, token, generated order IDs and timestamps.');
+    const comparisonStatus = statusMatch && schemaMatch && shapeMatch && enumMatch && identifierMappingMatch ? 'PASS' : 'DRIFT';
+    report.comparisons.push({ endpoint, status: comparisonStatus, statusMatch, schemaMatch, shapeMatch, identifierMappingMatch, enumMatch, notes });
+  }
+  report.status = report.comparisons.length === 0 ? 'REAL_CAPTURE_PENDING' : report.comparisons.some((item) => item.status === 'MAPPING_REQUIRED') ? 'MAPPING_REQUIRED' : report.comparisons.some((item) => item.status === 'DRIFT') ? 'DRIFT' : 'PASS';
   await writeReport(report);
   console.log(JSON.stringify(report));
-  if (report.status === 'drift_detected') process.exitCode = 1;
+  if (method === 'verify' && (report.status === 'DRIFT' || report.status === 'MAPPING_REQUIRED')) process.exitCode = 1;
+  return report;
 }
 
-async function writeReport(report: unknown): Promise<void> {
+async function writeReport(report: Report): Promise<void> {
   await mkdir(resolve(process.cwd(), 'conformance'), { recursive: true });
   await writeFile(reportPath, JSON.stringify(report, null, 2));
-  const data = report as { status: string; comparisons?: Array<Record<string, unknown>> };
-  const lines = ['# Conformance report', '', `Status: **${data.status}**`, '', '| Endpoint | Status | Shape match |', '|---|---:|---:|'];
-  for (const comparison of data.comparisons ?? []) lines.push(`| ${String(comparison.endpoint)} | ${String(comparison.realStatus)} / ${String(comparison.simulatorStatus)} | ${String(comparison.shapeMatch)} |`);
+  const lines = ['# Conformance report', '', `Status: **${report.status}**`, '', '| Endpoint | Status | Status match | Schema match | Shape match | ID mapping | Enum match | Notes |', '|---|---|---:|---:|---:|---:|---:|---|'];
+  for (const comparison of report.comparisons) lines.push(`| ${comparison.endpoint} | ${comparison.status} | ${String(comparison.statusMatch)} | ${String(comparison.schemaMatch)} | ${String(comparison.shapeMatch)} | ${String(comparison.identifierMappingMatch)} | ${String(comparison.enumMatch)} | ${comparison.notes.join(' ')} |`);
+  if (report.notes.length) lines.push('', ...report.notes.map((note) => `- ${note}`));
   lines.push('', 'Real write endpoints are never called by this command.');
   await writeFile(resolve(process.cwd(), 'conformance/report.md'), `${lines.join('\n')}\n`);
 }

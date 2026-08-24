@@ -40,6 +40,11 @@ export interface SimOrder {
   status: WireOrderStatus;
   creationStatus: 'Success' | 'InProgress' | 'Error';
   history: Array<{ status: WireOrderStatus; at: string }>;
+  acceptedAt: number | null;
+  cookingStartedAt: number | null;
+  cookingCompletedAt: number | null;
+  closedAt: number | null;
+  cancelledAt: number | null;
 }
 
 export interface CommandState {
@@ -147,8 +152,14 @@ export class SimulatorState {
     };
     if (order.status !== target && !allowed[order.status].includes(target)) throw new Error(`Invalid order transition ${order.status} -> ${target}`);
     if (order.status !== target) {
+      const transitionAt = this.clock.nowMs();
       order.status = target;
-      order.history.push({ status: target, at: this.clock.now().toISOString() });
+      order.history.push({ status: target, at: new Date(transitionAt).toISOString() });
+      if (target === 'WaitCooking') order.acceptedAt = transitionAt;
+      if (target === 'CookingStarted') order.cookingStartedAt = transitionAt;
+      if (target === 'CookingCompleted') order.cookingCompletedAt = transitionAt;
+      if (target === 'Closed') order.closedAt = transitionAt;
+      if (target === 'Cancelled') order.cancelledAt = transitionAt;
     }
     return order;
   }

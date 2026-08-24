@@ -20,3 +20,5 @@
 | `/api/2/menu/by_id` | yes | yes | no | Version 2 minimal fixture |
 
 Current status vocabulary: `PUBLIC_SCHEMA_VERIFIED` for the public contract and simulator implementation; `REAL_CAPTURE_VERIFIED` remains pending. Unsupported webhook configuration and broad iikoCloud universe endpoints are intentionally outside this phase.
+
+See [conformance mapping](mapping.md) for the explicit real-identifier remapping and semantic compare workflow.

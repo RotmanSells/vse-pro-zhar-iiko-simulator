@@ -15,7 +15,7 @@ import { OrderService } from '../features/orders/order-service.js';
 import { CommandService } from '../features/commands/command-service.js';
 import { ControlService } from '../features/control/control-service.js';
 import { buildSimulatorOpenApi } from '../features/control/openapi.js';
-import type { FaultAction } from '../simulator/faults/faults.js';
+import { effectiveFaultDelay, type FaultAction } from '../simulator/faults/faults.js';
 
 export interface SimulatorApp {
   server: Server;
@@ -43,6 +43,7 @@ export function createApp(config: Config = loadConfig(), clock: Clock = new Syst
     let status = 200;
     let correlationId: unknown = null;
     let errorMessage: string | null = null;
+    request.once('aborted', () => { if (!response.writableEnded && !response.destroyed) response.destroy(); });
     try {
       if (url.pathname === '/__simulator/health' && method === 'GET') {
         sendJson(response, 200, { status: 'ok', service: 'vse-pro-zhar-iiko-simulator', scenario: state.currentScenario, upstreamSchema: 'contracts/upstream/iiko-openapi.json' });
@@ -69,6 +70,7 @@ export function createApp(config: Config = loadConfig(), clock: Clock = new Syst
       const fault = state.faults.consume(url.pathname);
       const faultStatus = await applyFault(fault, response, url.pathname, validator);
       if (faultStatus !== null) { status = faultStatus; return; }
+      if (response.destroyed || response.writableEnded) { status = 0; return; }
       if (config.rateLimit.enabled && state.isRateLimited(config.rateLimit.requests, config.rateLimit.windowMs)) {
         const body = errorBody(state.ids.next('correlation'), 'Rate limit exceeded', 'Common');
         sendJson(response, 429, body);
@@ -138,11 +140,15 @@ function assertControlToken(request: IncomingMessage, config: Config): void {
 
 async function applyFault(fault: FaultAction | null, response: ServerResponse, path: string, validator: UpstreamValidator): Promise<number | null> {
   if (!fault) return null;
-  if (fault.delayMs) await new Promise<void>((resolve) => setTimeout(resolve, fault.delayMs));
+  const delayMs = effectiveFaultDelay(fault);
+  if (delayMs > 0) await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
   if (fault.mode === 'connection-drop') { response.destroy(); return 0; }
   if (fault.mode === 'malformed-json') { response.writeHead(200, { 'content-type': 'application/json' }); response.end('{ malformed'); return 200; }
-  if (fault.mode === 'timeout') { const body = errorBody('00000000-0000-4000-8000-000000000408', `Simulated timeout for ${path}`, 'Common'); validator.responseErrors(path, body, 408); sendJson(response, 408, body); return 408; }
-  if (fault.mode === 'status') { const status = fault.status ?? 500; const body = errorBody('00000000-0000-4000-8000-000000000500', `Simulated ${status}`, 'Common'); if ([500].includes(status)) validator.responseErrors(path, body, status); sendJson(response, status, body); return status; }
+  // `timeout` is a bounded network-delay fault. If the client aborts during the delay,
+  // the guarded response check above prevents a late write. A client that waits long
+  // enough receives the endpoint's normal response, just like a slow upstream.
+  if (fault.mode === 'timeout') return null;
+  if (fault.mode === 'status') { const status = fault.status ?? 500; const body = errorBody('00000000-0000-4000-8000-000000000500', `Simulated ${status}`, 'Common'); if ([408, 500].includes(status)) validator.responseErrors(path, body, status); sendJson(response, status, body); return status; }
   return null;
 }
 
