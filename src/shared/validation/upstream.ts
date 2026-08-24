@@ -95,4 +95,31 @@ export class UpstreamValidator {
   responseErrors(path: string, payload: unknown, status: number): void {
     this.response(path, payload, String(status));
   }
+
+  fixedArrayPaths(path: string, status = '200'): ReadonlySet<string> {
+    const operation = this.document.paths[path]?.post;
+    const schema = operation?.responses?.[status]?.content?.['application/json']?.schema;
+    const fixed = new Set<string>();
+    const visit = (node: unknown, currentPath: string, seenRefs: Set<string>): void => {
+      if (!node || typeof node !== 'object') return;
+      const object = node as Record<string, unknown>;
+      const ref = typeof object.$ref === 'string' ? object.$ref : null;
+      if (ref) {
+        if (seenRefs.has(ref)) return;
+        const name = ref.split('/').pop();
+        const referenced = name ? this.document.components.schemas[name] : undefined;
+        if (referenced) visit(referenced, currentPath, new Set([...seenRefs, ref]));
+      }
+      if (object.type === 'array') {
+        const minItems = typeof object.minItems === 'number' ? object.minItems : undefined;
+        const maxItems = typeof object.maxItems === 'number' ? object.maxItems : undefined;
+        if (object.prefixItems || (minItems !== undefined && maxItems !== undefined && minItems === maxItems)) fixed.add(currentPath);
+        if (object.items) visit(object.items, `${currentPath}[]`, seenRefs);
+      }
+      if (object.properties && typeof object.properties === 'object') for (const [key, child] of Object.entries(object.properties)) visit(child, `${currentPath}/${key}`, seenRefs);
+      for (const key of ['allOf', 'anyOf', 'oneOf']) if (Array.isArray(object[key])) for (const child of object[key]) visit(child, currentPath, seenRefs);
+    };
+    visit(schema, '', new Set());
+    return fixed;
+  }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IdentifierMappingSchema, collectIdentifiers, mappingTargetsAreAllowed, missingMappings, normalizeForCompare, remapRequestIdentifiers } from '../../src/conformance/mapping.js';
+import { IdentifierMappingSchema, collectIdentifiers, mappingTargetsAreAllowed, missingMappings, normalizeForCompare, remapRequestIdentifiers, shape, enumValues } from '../../src/conformance/mapping.js';
 
 const mapping = IdentifierMappingSchema.parse({
   version: 1,
@@ -28,5 +28,21 @@ describe('conformance identifier mapping', () => {
   it('rejects a mapping target outside the simulator identifier inventory', () => {
     expect(mappingTargetsAreAllowed(mapping, { organizationIds: new Set(['sim-org-B']), terminalGroupIds: new Set(['sim-terminal-B']), orderTypeIds: new Set(), paymentTypeIds: new Set(), productIds: new Set(), modifierIds: new Set() })).toBe(true);
     expect(mappingTargetsAreAllowed({ ...mapping, organizationIds: { 'real-org-A': 'wrong-org' } }, { organizationIds: new Set(['sim-org-B']), terminalGroupIds: new Set(['sim-terminal-B']), orderTypeIds: new Set(), paymentTypeIds: new Set(), productIds: new Set(), modifierIds: new Set() })).toBe(false);
+  });
+
+  it('compares collection element shapes without comparing cardinality', () => {
+    const real = [{ id: '1', name: 'A' }, { id: '2', name: 'B' }, { id: '3', name: 'C' }];
+    const simulator = [{ id: '4', name: 'D' }];
+    expect(shape(real)).toEqual(shape(simulator));
+    expect(shape(real)).not.toEqual(shape([{ id: '4', name: 'D' }, { unexpected: true }]));
+    expect(shape([['a', 'b'], ['c']])).toEqual(shape([['d']]));
+    expect(shape([1, 2], '', { fixedArrayPaths: new Set(['']) })).not.toEqual(shape([1], '', { fixedArrayPaths: new Set(['']) }));
+  });
+
+  it('compares enum values as unique field/path sets', () => {
+    const real = { paymentTypeKind: ['External', 'External', 'Cash', 'Card'] };
+    const simulator = { paymentTypeKind: ['External', 'Cash', 'Card'] };
+    expect(enumValues(real)).toEqual(enumValues(simulator));
+    expect(enumValues({ paymentTypeKind: ['External'], orderServiceType: ['DeliveryPickUp'] })).not.toEqual(enumValues({ paymentTypeKind: ['External'], orderServiceType: ['DeliveryByClient'] }));
   });
 });

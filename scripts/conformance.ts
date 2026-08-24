@@ -32,8 +32,19 @@ async function jsonRequest(base: string, path: string, body: unknown, token?: st
 }
 
 async function readMapping(): Promise<IdentifierMapping> {
-  try { return IdentifierMappingSchema.parse(JSON.parse(await readFile(mappingPath, 'utf8')) as unknown); }
-  catch { return EmptyIdentifierMapping; }
+  let raw: string;
+  try {
+    raw = await readFile(mappingPath, 'utf8');
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return EmptyIdentifierMapping;
+    throw new Error(`Unable to read conformance mapping ${mappingPath}`);
+  }
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw) as unknown; }
+  catch { throw new Error(`Invalid mapping JSON in ${mappingPath}`); }
+  const validated = IdentifierMappingSchema.safeParse(parsed);
+  if (!validated.success) throw new Error(`Invalid mapping schema in ${mappingPath}: ${validated.error.issues.map((issue) => issue.path.join('.') || 'root').join(', ')}`);
+  return validated.data;
 }
 
 function allowedSimulatorIds(): Record<MappingRole, Set<string>> {
@@ -138,8 +149,9 @@ async function compare(): Promise<Report> {
     const schemaMatch = realSchema && simulatorSchema;
     const normalizedReal = normalizeForCompare(realBody, mapping);
     const normalizedSimulator = normalizeForCompare(simulator.body, mapping);
-    const shapeMatch = JSON.stringify(shape(normalizedReal)) === JSON.stringify(shape(normalizedSimulator));
-    const enumMatch = JSON.stringify(enumValues(normalizedReal).sort()) === JSON.stringify(enumValues(normalizedSimulator).sort());
+    const fixedArrayPaths = validator.fixedArrayPaths(endpoint, '200');
+    const shapeMatch = JSON.stringify(shape(normalizedReal, '', { fixedArrayPaths })) === JSON.stringify(shape(normalizedSimulator, '', { fixedArrayPaths }));
+    const enumMatch = JSON.stringify(enumValues(normalizedReal)) === JSON.stringify(enumValues(normalizedSimulator));
     const targetsAllowed = mappingTargetsAreAllowed(mapping, allowed);
     const identifierMappingMatch = targetsAllowed && compareIdentifiers(endpoint, request, realBody, remapped.value, simulator.body, mapping);
     if (!targetsAllowed) notes.push('At least one mapping target is not a valid identifier in the synthetic simulator dataset.');

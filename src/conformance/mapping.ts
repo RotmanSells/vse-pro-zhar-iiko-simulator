@@ -134,17 +134,37 @@ export function normalizeForCompare(value: unknown, mapping: IdentifierMapping, 
   return value;
 }
 
-export function shape(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(shape);
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, shape(child)]));
+export interface ShapeOptions {
+  fixedArrayPaths?: ReadonlySet<string>;
+}
+
+export function shape(value: unknown, path = '', options: ShapeOptions = {}): unknown {
+  if (Array.isArray(value)) {
+    if (options.fixedArrayPaths?.has(path)) return { kind: 'tuple', items: value.map((item, index) => shape(item, `${path}/${index}`, options)) };
+    const unique = new Map<string, unknown>();
+    for (const item of value) {
+      const itemShape = shape(item, `${path}[]`, options);
+      unique.set(JSON.stringify(itemShape), itemShape);
+    }
+    return { kind: 'collection', items: [...unique.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, itemShape]) => itemShape) };
+  }
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, shape(child, `${path}/${key}`, options)]));
   return typeof value;
 }
 
-export function enumValues(value: unknown, key = ''): string[] {
+export type EnumValue = { path: string; field: string; value: string };
+
+export function enumValues(value: unknown, key = '', path = ''): EnumValue[] {
   const knownEnumKeys = new Set(['status', 'creationStatus', 'orderServiceType', 'paymentTypeKind', 'paymentProcessingType', 'state', 'type']);
-  if (Array.isArray(value)) return value.flatMap((item) => enumValues(item, key));
-  if (value && typeof value === 'object') return Object.entries(value).flatMap(([childKey, childValue]) => enumValues(childValue, childKey));
-  return knownEnumKeys.has(key) && typeof value === 'string' ? [value] : [];
+  if (Array.isArray(value)) return uniqueEnumValues(value.flatMap((item) => enumValues(item, key, `${path}[]`)));
+  if (value && typeof value === 'object') return uniqueEnumValues(Object.entries(value).flatMap(([childKey, childValue]) => enumValues(childValue, childKey, `${path}/${childKey}`)));
+  return knownEnumKeys.has(key) && typeof value === 'string' ? [{ path, field: key, value }] : [];
+}
+
+function uniqueEnumValues(values: EnumValue[]): EnumValue[] {
+  const unique = new Map<string, EnumValue>();
+  for (const value of values) unique.set(`${value.path}|${value.field}|${value.value}`, value);
+  return [...unique.values()].sort((left, right) => `${left.path}|${left.field}|${left.value}`.localeCompare(`${right.path}|${right.field}|${right.value}`));
 }
 
 export function mappingTargetsAreAllowed(mapping: IdentifierMapping, allowed: Record<MappingRole, Set<string>>): boolean {
