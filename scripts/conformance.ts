@@ -2,7 +2,7 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { loadDataset } from '../src/simulator/dataset/loader.js';
 import { UpstreamValidator } from '../src/shared/validation/upstream.js';
-import { EmptyIdentifierMapping, IdentifierMappingSchema, collectIdentifiers, enumValues, mappingTargetsAreAllowed, missingMappings, normalizeForCompare, remapRequestIdentifiers, shape, mappingTargetForTest, type IdentifierMapping, type MappingRole } from '../src/conformance/mapping.js';
+import { EmptyIdentifierMapping, IdentifierMappingSchema, collectIdentifiers, compareIdentifierMapping, enumValues, mappingTargetsAreAllowed, missingMappings, normalizeForCompare, remapRequestIdentifiers, shape, type IdentifierMapping, type MappingRole } from '../src/conformance/mapping.js';
 
 const enabled = process.env.IIKO_CONFORMANCE_ENABLED === 'true';
 const realBase = process.env.IIKO_REAL_BASE_URL;
@@ -94,15 +94,6 @@ function validateSchema(validator: UpstreamValidator, endpoint: string, result: 
   } catch { return false; }
 }
 
-function compareIdentifiers(endpoint: string, realRequest: unknown, realBody: unknown, simulatorRequest: unknown, simulatorBody: unknown, mapping: IdentifierMapping): boolean {
-  const realRefs = [...collectIdentifiers(endpoint, realRequest), ...collectIdentifiers(endpoint, realBody)];
-  const simRefs = [...collectIdentifiers(endpoint, simulatorRequest), ...collectIdentifiers(endpoint, simulatorBody)];
-  return realRefs.every((realRef) => {
-    const target = mappingTargetForTest(mapping, realRef.role, realRef.value);
-    return target !== null && simRefs.some((simRef) => simRef.role === realRef.role && simRef.value === target);
-  });
-}
-
 async function compare(): Promise<Report> {
   const report: Report = { enabled: enabled && Boolean(realBase), status: 'REAL_CAPTURE_PENDING', mappingPath, comparisons: [], notes: [] };
   if (!enabled || !realBase) {
@@ -153,7 +144,7 @@ async function compare(): Promise<Report> {
     const shapeMatch = JSON.stringify(shape(normalizedReal, '', { fixedArrayPaths })) === JSON.stringify(shape(normalizedSimulator, '', { fixedArrayPaths }));
     const enumMatch = JSON.stringify(enumValues(normalizedReal)) === JSON.stringify(enumValues(normalizedSimulator));
     const targetsAllowed = mappingTargetsAreAllowed(mapping, allowed);
-    const identifierMappingMatch = targetsAllowed && compareIdentifiers(endpoint, request, realBody, remapped.value, simulator.body, mapping);
+    const identifierMappingMatch = targetsAllowed && compareIdentifierMapping(endpoint, request, realBody, remapped.value, simulator.body, mapping);
     if (!targetsAllowed) notes.push('At least one mapping target is not a valid identifier in the synthetic simulator dataset.');
     notes.push('Volatile normalized: correlationId, token, generated order IDs and timestamps.');
     const comparisonStatus = statusMatch && schemaMatch && shapeMatch && enumMatch && identifierMappingMatch ? 'PASS' : 'DRIFT';

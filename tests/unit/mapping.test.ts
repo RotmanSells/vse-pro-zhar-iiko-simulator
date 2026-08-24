@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IdentifierMappingSchema, collectIdentifiers, mappingTargetsAreAllowed, missingMappings, normalizeForCompare, remapRequestIdentifiers, shape, enumValues } from '../../src/conformance/mapping.js';
+import { IdentifierMappingSchema, collectIdentifiers, compareIdentifierMapping, compareMappedRelationships, mappingTargetsAreAllowed, missingMappings, normalizeForCompare, remapRequestIdentifiers, shape, enumValues } from '../../src/conformance/mapping.js';
 
 const mapping = IdentifierMappingSchema.parse({
   version: 1,
@@ -44,5 +44,16 @@ describe('conformance identifier mapping', () => {
     const simulator = { paymentTypeKind: ['External', 'Cash', 'Card'] };
     expect(enumValues(real)).toEqual(enumValues(simulator));
     expect(enumValues({ paymentTypeKind: ['External'], orderServiceType: ['DeliveryPickUp'] })).not.toEqual(enumValues({ paymentTypeKind: ['External'], orderServiceType: ['DeliveryByClient'] }));
+  });
+
+  it('compares terminal organization → terminal relationships after mapping, not by array membership', () => {
+    const relationshipMapping = IdentifierMappingSchema.parse({ version: 1, organizationIds: { 'real-org-A': 'sim-org-A', 'real-org-B': 'sim-org-B' }, terminalGroupIds: { 'real-terminal-A': 'sim-terminal-A', 'real-terminal-B': 'sim-terminal-B' }, orderTypeIds: {}, paymentTypeIds: {}, productIds: {}, modifierIds: {} });
+    const real = { terminalGroups: [{ organizationId: 'real-org-A', items: [{ id: 'real-terminal-A' }] }, { organizationId: 'real-org-B', items: [{ id: 'real-terminal-B' }] }] };
+    const correct = { terminalGroups: [{ organizationId: 'sim-org-A', items: [{ id: 'sim-terminal-A' }] }, { organizationId: 'sim-org-B', items: [{ id: 'sim-terminal-B' }] }] };
+    const swapped = { terminalGroups: [{ organizationId: 'sim-org-A', items: [{ id: 'sim-terminal-B' }] }, { organizationId: 'sim-org-B', items: [{ id: 'sim-terminal-A' }] }] };
+    expect(compareMappedRelationships('/api/1/terminal_groups', real, correct, relationshipMapping)).toBe(true);
+    expect(compareMappedRelationships('/api/1/terminal_groups', real, swapped, relationshipMapping)).toBe(false);
+    expect(compareIdentifierMapping('/api/1/terminal_groups', {}, real, {}, correct, relationshipMapping)).toBe(true);
+    expect(compareIdentifierMapping('/api/1/terminal_groups', {}, real, {}, swapped, relationshipMapping)).toBe(false);
   });
 });

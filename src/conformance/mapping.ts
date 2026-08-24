@@ -91,12 +91,78 @@ export function collectIdentifiers(endpoint: string, value: unknown): Identifier
   return found;
 }
 
-export function missingMappings(refs: IdentifierRef[], mapping: IdentifierMapping): IdentifierRef[] {
-  return refs.filter((ref) => !mappingTarget(mapping, ref.role, ref.value));
+export type IdentifierRelationship = { parent: IdentifierRef; child: IdentifierRef };
+
+const relationshipAllowed: Record<MappingRole, MappingRole[]> = {
+  organizationIds: ['terminalGroupIds', 'orderTypeIds', 'paymentTypeIds'],
+  terminalGroupIds: ['productIds', 'modifierIds'],
+  orderTypeIds: [],
+  paymentTypeIds: ['terminalGroupIds'],
+  productIds: ['modifierIds'],
+  modifierIds: []
+};
+
+function localIdentifiers(endpoint: string, value: unknown, path: string): IdentifierRef[] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+  return Object.entries(value).flatMap(([key, childValue]) => {
+    const role = idRoleForPath(endpoint, key, `${path}/${key}`);
+    return typeof childValue === 'string' && role ? [{ role, value: childValue, path: `${path}/${key}` }] : [];
+  });
 }
 
-export function mappingTargetForTest(mapping: IdentifierMapping, role: MappingRole, value: string): string | null {
-  return mappingTarget(mapping, role, value);
+export function collectRelationships(endpoint: string, value: unknown): IdentifierRelationship[] {
+  const relationships: IdentifierRelationship[] = [];
+  const add = (parent: IdentifierRef, child: IdentifierRef): void => {
+    if (!relationshipAllowed[parent.role].includes(child.role)) return;
+    relationships.push({ parent, child });
+  };
+  const walk = (current: unknown, path: string): void => {
+    if (Array.isArray(current)) {
+      current.forEach((item, index) => walk(item, `${path}/${index}`));
+      return;
+    }
+    if (!current || typeof current !== 'object') return;
+    const locals = localIdentifiers(endpoint, current, path);
+    for (const parent of locals) for (const child of locals) if (parent.value !== child.value) add(parent, child);
+    for (const [key, childValue] of Object.entries(current)) {
+      if (!Array.isArray(childValue)) {
+        walk(childValue, `${path}/${key}`);
+        continue;
+      }
+      const children = childValue.flatMap((item, index) => localIdentifiers(endpoint, item, `${path}/${key}/${index}`));
+      for (const parent of locals) for (const child of children) add(parent, child);
+      walk(childValue, `${path}/${key}`);
+    }
+  };
+  walk(value, '');
+  const unique = new Map<string, IdentifierRelationship>();
+  for (const relationship of relationships) unique.set(`${relationship.parent.role}:${relationship.parent.value}->${relationship.child.role}:${relationship.child.value}`, relationship);
+  return [...unique.values()];
+}
+
+export function compareMappedRelationships(endpoint: string, realValue: unknown, simulatorValue: unknown, mapping: IdentifierMapping): boolean {
+  const realRelationships = collectRelationships(endpoint, realValue);
+  const simulatorRelationships = collectRelationships(endpoint, simulatorValue);
+  return realRelationships.every((relationship) => {
+    const parent = mappingTarget(mapping, relationship.parent.role, relationship.parent.value);
+    const child = mappingTarget(mapping, relationship.child.role, relationship.child.value);
+    if (!parent || !child) return false;
+    return simulatorRelationships.some((candidate) => candidate.parent.role === relationship.parent.role && candidate.parent.value === parent && candidate.child.role === relationship.child.role && candidate.child.value === child);
+  });
+}
+
+export function compareIdentifierMapping(endpoint: string, realRequest: unknown, realBody: unknown, simulatorRequest: unknown, simulatorBody: unknown, mapping: IdentifierMapping): boolean {
+  const realRefs = [...collectIdentifiers(endpoint, realRequest), ...collectIdentifiers(endpoint, realBody)];
+  const simulatorRefs = [...collectIdentifiers(endpoint, simulatorRequest), ...collectIdentifiers(endpoint, simulatorBody)];
+  const mappedIdsMatch = realRefs.every((realRef) => {
+    const target = mappingTarget(mapping, realRef.role, realRef.value);
+    return target !== null && simulatorRefs.some((simulatorRef) => simulatorRef.role === realRef.role && simulatorRef.value === target);
+  });
+  return mappedIdsMatch && compareMappedRelationships(endpoint, { request: realRequest, response: realBody }, { request: simulatorRequest, response: simulatorBody }, mapping);
+}
+
+export function missingMappings(refs: IdentifierRef[], mapping: IdentifierMapping): IdentifierRef[] {
+  return refs.filter((ref) => !mappingTarget(mapping, ref.role, ref.value));
 }
 
 function canonicalIdentifier(value: string, mapping: IdentifierMapping): string | null {
